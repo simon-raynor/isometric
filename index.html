@@ -1,0 +1,55 @@
+<!doctype html>
+<html>
+<head>
+<script type="importmap">
+{
+    "imports": {
+        "three": "https://unpkg.com/three@0.166.0/build/three.module.js",
+        "three/addons/": "https://unpkg.com/three@0.166.0/examples/jsm/"
+    }
+}
+</script>
+<style>
+html {
+    min-height: 100%;
+}
+body {
+    min-height: 100%;
+
+    margin: 0;
+    padding: 0;
+}
+#stage {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 1;
+}
+#content {
+    position: relative;
+    z-index: 2;
+
+    color: white;
+}
+</style>
+</head>
+<body>
+    <div id="stage"></div>
+
+    <article id="content">
+        <h1>Simon Raynor</h1>
+        <!-- <h2>Web Developer</h2>
+
+        <p>
+            If you're reading this it's probably for one of two reasons: I want you
+            to hire me or I'm showing off at a party. Arguably those are the <em>same</em>
+            reason but at least in the first case I won't be right there in front of
+            you fishing for compliments ;)
+        </p> -->
+    </article>
+
+    <script type="module" src="./index.js"></script>
+</body>
+</html>
