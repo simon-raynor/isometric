@@ -1,14 +1,7 @@
 <!doctype html>
 <html>
 <head>
-<script type="importmap">
-{
-    "imports": {
-        "three": "https://unpkg.com/three@0.166.0/build/three.module.js",
-        "three/addons/": "https://unpkg.com/three@0.166.0/examples/jsm/"
-    }
-}
-</script>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
 <style>
 html {
     min-height: 100%;
@@ -50,6 +43,14 @@ body {
         </p> -->
     </article>
 
-    <script type="module" src="./index.js"></script>
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.166.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.166.0/examples/jsm/"
+            }
+        }
+        </script>
+    <script type="module" src="./js/index.js"></script>
 </body>
 </html>
