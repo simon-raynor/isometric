@@ -60,8 +60,12 @@ controls.update();
 
 const composer = new EffectComposer( renderer );
 
-const PIXEL_SIZE = 2 * window.devicePixelRatio;
-const pixelPass = new RenderPixelatedPass(PIXEL_SIZE, scene, camera);
+const PIXEL_SIZE = 2;
+const pixelPass = new RenderPixelatedPass(
+    PIXEL_SIZE * window.devicePixelRatio,
+    scene,
+    camera
+);
 pixelPass.normalEdgeStrength = 0.05;
 pixelPass.depthEdgeStrength = 0.1;
 
@@ -156,46 +160,9 @@ const maxz = Math.max.apply(null, planeCorners.map(v => v.z));
 const planewidth = maxx - minx;
 
 
-/* document.body.addEventListener(
-    'click',
-    evt => {
-        const x = (evt.pageX / window.innerWidth) * 2 - 1;
-        const y = 1 - (evt.pageY / window.innerHeight) * 2;
-        raycaster.setFromCamera({x, y}, camera);
-
-        const hits = raycaster.intersectObject(floor, false);
-        console.log([x, y], hits);
-
-        if (hits[0]) {
-            const s = new THREE.Mesh(
-                new THREE.SphereGeometry(1),
-                new THREE.MeshBasicMaterial()
-            );
-            s.position.copy(hits[0].point);
-            scene.add(s);
-        }
-    }
-) */
 
 
-
-
-/* document.body.addEventListener(
-    'wheel',
-    evt => {
-        console.log(evt);
-        camera.position.z += evt.deltaY / 10;
-    }
-) */
-
-
-
-
-const butterflies = new Butterflies();
-console.log(butterflies);
-scene.add(butterflies.mesh);
-
-butterflies.initComputeRenderer(renderer);
+const butterflies = new Butterflies(20);
 
 butterflies.setBounds(
     minx,
@@ -204,10 +171,18 @@ butterflies.setBounds(
     maxz
 );
 
+Butterflies.fetchShaders().then(
+    () => {
+        butterflies.initMesh();
+        butterflies.initComputeRenderer(renderer);
+
+        scene.add(butterflies.mesh);
+    }
+);
 
 
 
-const letters = 'simon raynor'
+const letters = 'some text'
                 .toUpperCase()
                 .split('');
 
@@ -275,7 +250,7 @@ Promise.all([
                     geom,
                     new THREE.MeshLambertMaterial({
                         //color: 0xffdd11,
-                        map: texture
+                        //map: texture
                         //emissive: 0xccbb00
                     })
                 );
@@ -305,7 +280,7 @@ Promise.all([
 
     grp.position.setX(-left*scale/2);
 
-    scene.add(grp);
+    //scene.add(grp);
 });
 
 

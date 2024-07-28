@@ -74,7 +74,7 @@ export default class Butterflies {
 
 
         this.geom.rotateY(Math.PI / 2);
-        this.geom.scale(0.1, 0.1, 0.1);
+        this.geom.scale(0.2, 0.2, 0.2);
 
 
         this.uniforms = {
@@ -88,95 +88,36 @@ export default class Butterflies {
             texturePosition: { value: null },
             textureVelocity: { value: null },
         };
-        
+    }
+
+
+    static #vertexShader;
+    static #fragmentShader;
+    static #positionShader;
+    static #velocityShader;
+    static fetchShaders() {
+        // TODO: some sort of centralised loader
+        const urls = [
+            './assets/shaders/butterflies/vertex.glsl',
+            './assets/shaders/butterflies/fragment.glsl',
+            './assets/shaders/butterflies/position.glsl',
+            './assets/shaders/butterflies/velocity.glsl',
+        ];
+
+        return Promise.all(
+            urls.map(url => fetch(url).then(r => r.text()))
+        ).then(([vert, frag, posn, velo]) => {
+            Butterflies.#vertexShader = vert;
+            Butterflies.#fragmentShader = frag;
+            Butterflies.#positionShader = posn;
+            Butterflies.#velocityShader = velo;
+        });
+    }
+
+    initMesh() {
         this.material = new THREE.ShaderMaterial({
-            vertexShader: `
-            attribute float vidx;
-            uniform float t;
-
-            varying vec2 v_uv;
-
-            uniform sampler2D texturePosition;
-            uniform sampler2D textureVelocity;
-
-            attribute vec2 posn;
-
-            void main() {
-                vec3 newPosn = position;
-
-                vec3 pos = texture2D( texturePosition, posn ).xyz;
-                vec3 velocity = normalize(texture2D( textureVelocity, posn ).xyz);
-
-                float flap = (t + posn.x) * 15.0;
-
-                float sinf1 = sin(flap);
-                float cosf1 = cos(flap);
-                mat3 flapmat1 = mat3(
-                    1, 0, 0,
-                    0, cosf1, -sinf1,
-                    0, sinf1, cosf1
-                );
-
-                float sinf2 = sin(-flap);
-                float cosf2 = cos(-flap);
-                mat3 flapmat2 = mat3(
-                    1, 0, 0,
-                    0, cosf2, -sinf2,
-                    0, sinf2, cosf2
-                );
-
-                if (
-                    vidx == 1.0
-                    || vidx == 2.0
-                ) {
-                    newPosn = newPosn * flapmat1;
-                } else if (
-                    vidx == 4.0
-                    || vidx == 5.0
-                ) {
-                    newPosn = newPosn * flapmat2;
-                }
-
-                newPosn = mat3(modelMatrix) * newPosn;
-
-                velocity.z *= -1.;
-                float xz = length( velocity.xz );
-                float xyz = 1.;
-                float x = sqrt( 1. - velocity.y * velocity.y );
-
-                float cosry = velocity.x / xz;
-                float sinry = velocity.z / xz;
-
-                float cosrz = x / xyz;
-                float sinrz = velocity.y / xyz;
-
-                mat3 maty =  mat3(
-                    cosry, 0, -sinry,
-                    0    , 1, 0     ,
-                    sinry, 0, cosry
-                );
-
-                mat3 matz =  mat3(
-                    cosrz , sinrz, 0,
-                    -sinrz, cosrz, 0,
-                    0     , 0    , 1
-                );
-
-                newPosn =  maty * matz * newPosn;
-
-                newPosn += pos;
-
-                gl_Position = projectionMatrix * viewMatrix * vec4(newPosn, 1.0);
-                v_uv = uv;
-            }
-            `,
-            fragmentShader: `
-            varying vec2 v_uv;
-
-            void main() {
-                gl_FragColor = vec4(1.0 - v_uv.y, 1.0 - v_uv.x, v_uv.y - v_uv.x, 1.0);
-            }
-            `,
+            vertexShader: Butterflies.#vertexShader,
+            fragmentShader: Butterflies.#fragmentShader,
             uniforms: {
                 ...this.uniforms,
                 ...this.bflyUniforms
@@ -204,10 +145,15 @@ export default class Butterflies {
         const posnArr = posnTexture.image.data;
         const veloArr = veloTexture.image.data;
 
+        const xmin = this.uniforms.boundsX.value.x;
+        const width = this.uniforms.boundsX.value.y - xmin;
+        const zmin = this.uniforms.boundsZ.value.x;
+        const depth = this.uniforms.boundsZ.value.y - zmin;
+
         for (let i = 0, l = posnArr.length; i < l; i += 4) {
-            posnArr[ i + 0 ] = 25 - Math.random() * 50;
+            posnArr[ i + 0 ] = xmin + Math.random() * width;
             posnArr[ i + 1 ] = Math.random() * 25;
-            posnArr[ i + 2 ] = 25 - Math.random() * 50;
+            posnArr[ i + 2 ] = zmin + Math.random() * depth;
             posnArr[ i + 3 ] = 1;
 
             veloArr[ i + 0 ] = 0.5 - Math.random();
@@ -219,77 +165,13 @@ export default class Butterflies {
 
         this.posnVar = this.computer.addVariable(
             'texturePosition',
-            `
-            uniform float t;
-            uniform float dt;
-
-            void main() {
-
-                vec2 uv = gl_FragCoord.xy / resolution.xy;
-                vec4 tmpPos = texture2D( texturePosition, uv );
-                vec3 position = tmpPos.xyz;
-                vec3 velocity = texture2D( textureVelocity, uv ).xyz;
-
-                float phase = tmpPos.w;
-
-                phase = mod( ( phase + dt +
-                    length( velocity.xz ) * dt * 3. +
-                    max( velocity.y, 0.0 ) * dt * 6. ), 62.83 );
-
-                gl_FragColor = vec4( position + velocity * dt * 15., phase );
-            }
-            `,
+            Butterflies.#positionShader,
             posnTexture
         );
 
         this.veloVar = this.computer.addVariable(
             'textureVelocity',
-            `
-            uniform float t;
-            uniform float dt;
-            uniform vec2 boundsX;
-            uniform vec2 boundsZ;
-
-            const float width = resolution.x;
-            const float height = resolution.y;
-
-            void main() {
-                vec2 uv = gl_FragCoord.xy / resolution.xy;
-
-                vec3 myPosition = texture2D( texturePosition, uv ).xyz;
-                vec3 myVelocity = texture2D( textureVelocity, uv ).xyz;
-
-                if (myPosition.x < boundsX.x) {
-                    myVelocity.x += 0.05;
-                    myVelocity.y += 0.01;
-                } else if (myPosition.x > boundsX.y) {
-                    myVelocity.x -= 0.05;
-                    myVelocity.z -= 0.01;
-                }
-
-                if (myPosition.y < 0.0) {
-                    myVelocity.y += 0.01;
-                    myVelocity.z += 0.01;
-                } else if (myPosition.y > 10.0) {
-                    myVelocity.y -= 0.01;
-                    myVelocity.x -= 0.01;
-                }
-
-                if (myPosition.z < boundsZ.x) {
-                    myVelocity.z += 0.05;
-                    myVelocity.x += 0.01;
-                } else if (myPosition.z > boundsZ.y) {
-                    myVelocity.z -= 0.05;
-                    myVelocity.y -= 0.01;
-                }
-
-                if (length(myVelocity.xyz) > 1.0) {
-                    myVelocity *= 1.0 / length(myVelocity.xyz);
-                }
-
-                gl_FragColor = vec4( myVelocity, 1.0 );
-            }
-            `,
+            Butterflies.#velocityShader,
             veloTexture
         );
 
@@ -314,6 +196,8 @@ export default class Butterflies {
     }
 
     tick(dt) {
+        if (!this.computer) return;
+
         this.uniforms.t.value += dt;
         this.uniforms.dt.value = dt;
 
