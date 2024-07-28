@@ -7,6 +7,7 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPixelatedPass } from 'three/addons/postprocessing/RenderPixelatedPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import Butterflies from './butterflies.js';
 
 
 const stats = new Stats();
@@ -105,7 +106,8 @@ content.style.display = 'none'; // TODO: better to hide offscreen?
 const floor = new THREE.Mesh(
     new THREE.PlaneGeometry(10000, 10000),
     new THREE.MeshBasicMaterial({
-        color: 0x111111
+        color: 0x442211,
+        visible: false
     })
 );
 floor.rotateX(-Math.PI / 2);
@@ -134,12 +136,12 @@ const planeCorners = screenCorners.map(
         console.log([x, y], hits);
 
         if (hits[0]) {
-            const s = new THREE.Mesh(
+            /* const s = new THREE.Mesh(
                 new THREE.SphereGeometry(1),
                 new THREE.MeshBasicMaterial()
             );
             s.position.copy(hits[0].point);
-            scene.add(s);
+            scene.add(s); */
 
             return new THREE.Vector3().copy(hits[0].point);
         }
@@ -187,6 +189,20 @@ const planewidth = maxx - minx;
 ) */
 
 
+
+
+const butterflies = new Butterflies();
+console.log(butterflies);
+scene.add(butterflies.mesh);
+
+butterflies.initComputeRenderer(renderer);
+
+butterflies.setBounds(
+    minx,
+    maxx,
+    minz,
+    maxz
+);
 
 
 
@@ -294,22 +310,27 @@ Promise.all([
 
 
 
+let t = 0;
 
-function animate(_dt) {
-    const dt = _dt / 1000;
+function animate(_t) {
+    const dt = (_t - t) / 1000;
+    t = _t;
 
     requestAnimationFrame(animate);
+
+
 
     //controls.update();
     stats.update();
 
+    butterflies.tick(dt);
 
     //trees.forEach(t => t.tick(dt));
     if (lettermeshes[0]) {
         if (lettermeshes[0].position.y <= 0) {
             lettermeshes.shift().position.setY(0);
         } else {
-            lettermeshes[0].position.y -= dt;
+            lettermeshes[0].position.y -= dt * 200;
         }
     }
 
@@ -318,4 +339,4 @@ function animate(_dt) {
     composer.render( scene, camera );
 }
 
-animate();
+animate(t);
